@@ -1,19 +1,8 @@
+from config import *
 import csv
 import subprocess
 import time
 
-# Define the package name of the target application
-package_name = "com.uberconf"
-package_name_full = "com.uberconference.beta"
-
-# Define the interval between each sampling (in seconds)
-sampling_interval = 1
-
-# Define the duration of the monitoring (in seconds)
-monitoring_duration = 60
-
-# Define the output file name
-output_file = "app_monitoring.csv"
 
 # Open the output CSV file for writing
 with open(output_file, "w", newline="") as f:
@@ -34,12 +23,19 @@ with open(output_file, "w", newline="") as f:
 
         # Get the CPU usage of the target application
         cpu_output = subprocess.check_output(
-            ["adb", "shell", "top", "-n", "1", "-d", "1", "|", "grep", package_name]).decode().strip()
-        cpu_usage = float(cpu_output.split()[2].replace("%", ""))
+            ["adb", "shell", "top", "-n", "1", "-d", "1", "|", "grep", package_name[0:14]]).decode().strip()
+        try:
+            #format
+            # 8427 u0_a395      10 -10  34G 302M 173M S  123   5.4  25:31.76 us.zoom.videome+
+            cpu_usage = float(cpu_output.split()[9].replace("%", ""))
+            # print("CPU usage:", cpu_usage)
+        except ValueError as e:
+            print("Error:", e)
+            continue
 
         # Get the memory usage of the target application
         mem_output = subprocess.check_output(
-            ["adb", "shell", "dumpsys", "meminfo", package_name_full, "|", "grep", "TOTAL"]).decode().strip()
+            ["adb", "shell", "dumpsys", "meminfo", package_name, "|", "grep", "TOTAL"]).decode().strip()
         mem_usage = int(mem_output.split()[1])
 
         # Get the battery percentage of the device
@@ -48,12 +44,13 @@ with open(output_file, "w", newline="") as f:
         battery_percentage = int(battery_output.split()[1])
 
         # Get the CPU temperature of the device
-        #This part did not work
+        #This part did not work, may work on some devices.
         # temp_output = subprocess.check_output(
         #     ["adb", "shell", "cat", "/sys/class/thermal/thermal_zone*/temp"]).decode().strip()
         # cpu_temp = int(temp_output.split()[0]) / 1000
 
         # Write the data to the CSV file
+        print ("{0} {1} {2} {3}".format(timestamp, cpu_usage, mem_usage, battery_percentage))
         writer.writerow([timestamp, cpu_usage, mem_usage, battery_percentage])
 
         # Wait for the next sampling interval
